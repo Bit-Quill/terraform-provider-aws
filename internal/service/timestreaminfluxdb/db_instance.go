@@ -97,7 +97,12 @@ func newResourceDbInstance(_ context.Context) (resource.ResourceWithConfigure, e
 }
 
 const (
-	ResNameDbInstance = "Db Instance"
+	// If not provided, CreateDbInstance will use the below default values
+	// for bucket and organization. These values need to be set in Terraform
+	// because GetDbInstance won't return them.
+	DefaultBucketValue       = "bucket"
+	DefaultOrganizationValue = "organization"
+	ResNameDbInstance        = "Db Instance"
 )
 
 type resourceDbInstance struct {
@@ -230,7 +235,7 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 				Optional: true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(3),
-					stringvalidator.LengthAtLeast(64),
+					stringvalidator.LengthAtMost(64),
 					stringvalidator.RegexMatches(
 						// Taken from the model for TimestreamInfluxDB in AWS SDK Go V2
 						// https://github.com/aws/aws-sdk-go-v2/blob/8209abb7fa1aeb513228b4d8c1a459aeb6209d4d/codegen/sdk-codegen/aws-models/timestream-influxdb.json#L1390
@@ -409,20 +414,18 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 				},
 				NestedObject: schema.NestedBlockObject{
 					Blocks: map[string]schema.Block{
-						"s3_configuration": schema.ListNestedBlock{
-							NestedObject: schema.NestedBlockObject{
-								Attributes: map[string]schema.Attribute{
-									"bucket_name": schema.StringAttribute{
-										Optional: true,
-										Validators: []validator.String{
-											stringvalidator.LengthAtLeast(3),
-											stringvalidator.LengthAtMost(63),
-											stringvalidator.RegexMatches(regexache.MustCompile("^[0-9a-z]+[0-9a-z\\.\\-]*[0-9a-z]+$"), ""),
-										},
+						"s3_configuration": schema.SingleNestedBlock{
+							Attributes: map[string]schema.Attribute{
+								"bucket_name": schema.StringAttribute{
+									Optional: true,
+									Validators: []validator.String{
+										stringvalidator.LengthAtLeast(3),
+										stringvalidator.LengthAtMost(63),
+										stringvalidator.RegexMatches(regexache.MustCompile("^[0-9a-z]+[0-9a-z\\.\\-]*[0-9a-z]+$"), ""),
 									},
-									"enabled": schema.BoolAttribute{
-										Optional: true,
-									},
+								},
+								"enabled": schema.BoolAttribute{
+									Optional: true,
 								},
 							},
 						},
@@ -475,9 +478,10 @@ func (r *resourceDbInstance) Create(ctx context.Context, req resource.CreateRequ
 		VpcSubnetIds:        flex.ExpandFrameworkStringValueSet(ctx, plan.VPCSubnetIDs),
 		Tags:                getTagsIn(ctx),
 	}
-	if !plan.Bucket.IsNull() {
-		in.Bucket = aws.String(plan.Bucket.ValueString())
+	if plan.Bucket.IsNull() || plan.Bucket.IsUnknown() {
+		plan.Bucket = types.StringValue(DefaultBucketValue)
 	}
+	in.Bucket = aws.String(plan.Bucket.ValueString())
 	if !plan.DBParameterGroupIdentifier.IsNull() {
 		in.DbParameterGroupIdentifier = aws.String(plan.DBParameterGroupIdentifier.ValueString())
 	}
@@ -497,9 +501,10 @@ func (r *resourceDbInstance) Create(ctx context.Context, req resource.CreateRequ
 		}
 		in.LogDeliveryConfiguration = expandLogDeliveryConfiguration(tfList)
 	}
-	if !plan.Organization.IsNull() {
-		in.Organization = aws.String(plan.Organization.ValueString())
+	if plan.Organization.IsNull() || plan.Organization.IsUnknown() {
+		plan.Organization = types.StringValue(DefaultOrganizationValue)
 	}
+	in.Organization = aws.String(plan.Organization.ValueString())
 	if !plan.PubliclyAccessible.IsNull() {
 		in.PubliclyAccessible = aws.Bool(plan.PubliclyAccessible.ValueBool())
 	}
@@ -535,6 +540,10 @@ func (r *resourceDbInstance) Create(ctx context.Context, req resource.CreateRequ
 	resp.Diagnostics.Append(d...)
 	plan.LogDeliveryConfiguration = logDeliveryConfiguration
 	plan.InfluxAuthParametersSecretARN = flex.StringToFramework(ctx, out.InfluxAuthParametersSecretArn)
+	plan.DBParameterGroupIdentifier = flex.StringToFramework(ctx, out.DbParameterGroupIdentifier)
+	plan.DBStorageType = flex.StringToFramework(ctx, (*string)(&out.DbStorageType))
+	plan.DeploymentType = flex.StringToFramework(ctx, (*string)(&out.DeploymentType))
+	plan.PubliclyAccessible = flex.BoolToFramework(ctx, out.PubliclyAccessible)
 
 	// TIP: -- 6. Use a waiter to wait for create to complete
 	createTimeout := r.CreateTimeout(ctx, plan.Timeouts)
@@ -563,28 +572,8 @@ func (r *resourceDbInstance) Create(ctx context.Context, req resource.CreateRequ
 
 	// Attributes only set after resource is finished creating
 	plan.Endpoint = flex.StringToFramework(ctx, out.Endpoint)
-	plan.Status = flex.StringToFramework(ctx, (*string)(&readOut.Status.Values()[0]))
-	plan.DBStorageType = flex.StringToFramework(ctx, (*string)(&readOut.DbStorageType))
-	plan.DeploymentType = flex.StringToFramework(ctx, (*string)(&readOut.DeploymentType))
-	plan.PubliclyAccessible = flex.BoolToFramework(ctx, readOut.PubliclyAccessible)
+	plan.Status = flex.StringToFramework(ctx, (*string)(&readOut.Status))
 	plan.SecondaryAvailabilityZone = flex.StringToFramework(ctx, readOut.SecondaryAvailabilityZone)
-
-	if readOut.DbParameterGroupIdentifier != nil {
-		getDBParameterGroupInput := &timestreaminfluxdb.GetDbParameterGroupInput{
-			Identifier: readOut.DbParameterGroupIdentifier,
-		}
-		getDBParamaterGroupOutput, err := conn.GetDbParameterGroup(ctx, getDBParameterGroupInput)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				create.ProblemStandardMessage(names.TimestreamInfluxDB, create.ErrActionSetting, ResNameDbInstance, plan.ID.String(), err),
-				err.Error(),
-			)
-			return
-		}
-		plan.DBParameterGroupDescription = flex.StringToFramework(ctx, getDBParamaterGroupOutput.Description)
-	} else {
-		plan.DBParameterGroupDescription = types.StringNull()
-	}
 
 	// TIP: -- 7. Save the request plan to response state
 	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
@@ -975,12 +964,12 @@ func flattenLogDeliveryConfiguration(ctx context.Context, apiObject *awstypes.Lo
 	return listVal, diags
 }
 
-func flattenS3Configuration(ctx context.Context, apiObject *awstypes.S3Configuration) (types.List, diag.Diagnostics) {
+func flattenS3Configuration(ctx context.Context, apiObject *awstypes.S3Configuration) (types.Object, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	elemType := types.ObjectType{AttrTypes: s3ConfigurationAttrTypes}
 
 	if apiObject == nil {
-		return types.ListNull(elemType), diags
+		return types.ObjectNull(elemType.AttrTypes), diags
 	}
 
 	obj := map[string]attr.Value{
@@ -990,10 +979,7 @@ func flattenS3Configuration(ctx context.Context, apiObject *awstypes.S3Configura
 	objVal, d := types.ObjectValue(s3ConfigurationAttrTypes, obj)
 	diags.Append(d...)
 
-	listVal, d := types.ListValue(elemType, []attr.Value{objVal})
-	diags.Append(d...)
-
-	return listVal, diags
+	return objVal, diags
 }
 
 // TIP: ==== FLEX ====
@@ -1192,7 +1178,7 @@ type s3ConfigurationData struct {
 }
 
 var logDeliveryConfigrationAttrTypes = map[string]attr.Type{
-	"s3_configuration": types.ListType{ElemType: types.ObjectType{AttrTypes: s3ConfigurationAttrTypes}},
+	"s3_configuration": types.ObjectType{AttrTypes: s3ConfigurationAttrTypes},
 }
 
 var s3ConfigurationAttrTypes = map[string]attr.Type{
