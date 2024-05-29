@@ -227,10 +227,6 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 					"db.influx.12xlarge", 
 					"db.influx.16xlarge"`,
 			},
-			"db_parameter_group_description": schema.StringAttribute{
-				Optional: true,
-				Computed: true,
-			},
 			"db_parameter_group_identifier": schema.StringAttribute{
 				Optional: true,
 				Validators: []validator.String{
@@ -1146,7 +1142,6 @@ type resourceDbInstanceData struct {
 	AvailabilityZone              types.String   `tfsdk:"availability_zone"`
 	Bucket                        types.String   `tfsdk:"bucket"`
 	DBInstanceType                types.String   `tfsdk:"db_instance_type"`
-	DBParameterGroupDescription   types.String   `tfsdk:"db_parameter_group_description"`
 	DBParameterGroupIdentifier    types.String   `tfsdk:"db_parameter_group_identifier"`
 	DBStorageType                 types.String   `tfsdk:"db_storage_type"`
 	DeploymentType                types.String   `tfsdk:"deployment_type"`
