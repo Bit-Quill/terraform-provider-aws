@@ -236,7 +236,7 @@ func callService(ctx context.Context, t *testing.T, meta *conns.AWSClient) strin
 
 	client := meta.TimestreamInfluxDBClient(ctx)
 
-	_, err := client.GetDbInstance(ctx, &timestreaminfluxdb_sdkv2.GetDbInstanceInput{},
+	_, err := client.ListDbInstances(ctx, &timestreaminfluxdb_sdkv2.ListDbInstancesInput{},
 		func(opts *timestreaminfluxdb_sdkv2.Options) {
 			opts.APIOptions = append(opts.APIOptions,
 				addRetrieveEndpointURLMiddleware(t, &endpoint),
@@ -416,7 +416,7 @@ func retrieveEndpointURLMiddleware(t *testing.T, endpoint *string) middleware.Fi
 		})
 }
 
-var errCancelOperation = fmt.Errorf("Test: Cancelling request")
+var errCancelOperation = fmt.Errorf("Test: Canceling request")
 
 func addCancelRequestMiddleware() func(*middleware.Stack) error {
 	return func(stack *middleware.Stack) error {
