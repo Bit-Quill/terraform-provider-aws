@@ -629,7 +629,7 @@ func (r *resourceDbInstance) Read(ctx context.Context, req resource.ReadRequest,
 	state.ARN = flex.StringToFramework(ctx, out.Arn)
 	state.AllocatedStorage = flex.Int32ToFramework(ctx, out.AllocatedStorage)
 	state.AvailabilityZone = flex.StringToFramework(ctx, out.AvailabilityZone)
-	state.DBInstanceType = flex.StringToFramework(ctx, (*string)(&out.DbInstanceType.Values()[0]))
+	state.DBInstanceType = flex.StringToFramework(ctx, (*string)(&out.DbInstanceType))
 	state.DBParameterGroupIdentifier = flex.StringToFramework(ctx, out.DbParameterGroupIdentifier)
 	state.DBStorageType = flex.StringToFramework(ctx, (*string)(&out.DbStorageType))
 	state.DeploymentType = flex.StringToFramework(ctx, (*string)(&out.DeploymentType))
