@@ -51,10 +51,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -170,9 +172,7 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 					int64validator.AtLeast(20),
 					int64validator.AtMost(16384),
 				},
-				Description: `The amount of storage to allocate for your DB storage type in GiB (gibibytes). 
-					This argument is required. This argument has a minimum value of 
-					20 and a maximum value of 16384`,
+				Description: `The amount of storage to allocate for your DB storage type in GiB (gibibytes).`,
 			},
 			"arn": framework.ARNAttributeComputedOnly(),
 			"availability_zone": schema.StringAttribute{
@@ -181,6 +181,7 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 			"bucket": schema.StringAttribute{
 				Optional: true,
 				Computed: true,
+				Default:  stringdefault.StaticString(DefaultBucketValue),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -196,8 +197,7 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 				},
 				Description: `The name of the initial InfluxDB bucket. All InfluxDB data is stored in a bucket. 
 					A bucket combines the concept of a database and a retention period (the duration of time 
-					that each data point persists). A bucket belongs to an organization. This argument is optional. 
-					If not provided, defaults to "bucket"`,
+					that each data point persists). A bucket belongs to an organization.`,
 			},
 			"db_instance_type": schema.StringAttribute{
 				Required: true,
@@ -206,29 +206,28 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 				},
 				Validators: []validator.String{
 					stringvalidator.OneOf(
-						"db.influx.medium",
-						"db.influx.large",
-						"db.influx.xlarge",
-						"db.influx.2xlarge",
-						"db.influx.4xlarge",
-						"db.influx.8xlarge",
-						"db.influx.12xlarge",
-						"db.influx.16xlarge",
+						string(awstypes.DbInstanceTypeDbInfluxMedium),
+						string(awstypes.DbInstanceTypeDbInfluxLarge),
+						string(awstypes.DbInstanceTypeDbInfluxXlarge),
+						string(awstypes.DbInstanceTypeDbInflux2xlarge),
+						string(awstypes.DbInstanceTypeDbInflux4xlarge),
+						string(awstypes.DbInstanceTypeDbInflux8xlarge),
+						string(awstypes.DbInstanceTypeDbInflux12xlarge),
+						string(awstypes.DbInstanceTypeDbInflux16xlarge),
 					),
 				},
-				Description: `The Timestream for InfluxDB DB instance type to run InfluxDB on. 
-					This argument is required. Possible values: 
-					"db.influx.medium", 
-					"db.influx.large", 
-					"db.influx.xlarge", 
-					"db.influx.2xlarge", 
-					"db.influx.4xlarge", 
-					"db.influx.8xlarge", 
-					"db.influx.12xlarge", 
-					"db.influx.16xlarge"`,
+				Description: `The Timestream for InfluxDB DB instance type to run InfluxDB on.`,
 			},
 			"db_parameter_group_identifier": schema.StringAttribute{
 				Optional: true,
+				// Once a parameter group is associated with a DB instance, it cannot be removed.
+				// Therefore, if db_parameter_group_identifier is removed, a replace of the DB instance
+				// is necessary.
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplaceIf(
+						statementReplaceIf, "Replace db_parameter_group_identifier diff", "Replace db_parameter_group_identifier diff",
+					),
+				},
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(3),
 					stringvalidator.LengthAtMost(64),
@@ -243,43 +242,37 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 			"db_storage_type": schema.StringAttribute{
 				Optional: true,
 				Computed: true,
+				Default:  stringdefault.StaticString(string(awstypes.DbStorageTypeInfluxIoIncludedT1)),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
 					stringvalidator.OneOf(
-						"InfluxIOIncludedT1",
-						"InfluxIOIncludedT2",
-						"InfluxIOIncludedT3",
+						string(awstypes.DbStorageTypeInfluxIoIncludedT1),
+						string(awstypes.DbStorageTypeInfluxIoIncludedT2),
+						string(awstypes.DbStorageTypeInfluxIoIncludedT3),
 					),
 				},
 				Description: `The Timestream for InfluxDB DB storage type to read and write InfluxDB data. 
 					You can choose between 3 different types of provisioned Influx IOPS included storage according 
 					to your workloads requirements: Influx IO Included 3000 IOPS, Influx IO Included 12000 IOPS, 
-					Influx IO Included 16000 IOPS. This argument is optional. Possible values: 
-					"InfluxIOIncludedT1", 
-					"InfluxIOIncludedT2", 
-					"InfluxIOIncludedT3". 
-					If not provided, defaults to "InfluxIOIncludedT1"`,
+					Influx IO Included 16000 IOPS.`,
 			},
 			"deployment_type": schema.StringAttribute{
 				Optional: true,
 				Computed: true,
+				Default:  stringdefault.StaticString(string(awstypes.DeploymentTypeSingleAz)),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
 					stringvalidator.OneOf(
-						"SINGLE_AZ",
-						"WITH_MULTIAZ_STANDBY",
+						string(awstypes.DeploymentTypeSingleAz),
+						string(awstypes.DeploymentTypeWithMultiazStandby),
 					),
 				},
 				Description: `Specifies whether the DB instance will be deployed as a standalone instance or 
-					with a Multi-AZ standby for high availability. This argument is optional. 
-					Possible values: 
-					"SINGLE_AZ", 
-					"WITH_MULTIAZ_STANDBY". 
-					If not provided, defaults to "SINGLE_AZ"`,
+					with a Multi-AZ standby for high availability.`,
 			},
 			"endpoint": schema.StringAttribute{
 				Computed: true,
@@ -316,6 +309,7 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 			"organization": schema.StringAttribute{
 				Optional: true,
 				Computed: true,
+				Default:  stringdefault.StaticString(DefaultOrganizationValue),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -334,6 +328,7 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 			"publicly_accessible": schema.BoolAttribute{
 				Optional: true,
 				Computed: true,
+				Default:  booldefault.StaticBool(false),
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.RequiresReplace(),
 				},
@@ -438,6 +433,22 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 	}
 }
 
+func statementReplaceIf(ctx context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
+		return
+	}
+	var plan, state resourceDbInstanceData
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	dbParameterGroupIdentifierRemoved := (!state.DBParameterGroupIdentifier.IsNull() && plan.DBParameterGroupIdentifier.IsNull())
+
+	resp.RequiresReplace = dbParameterGroupIdentifierRemoved
+}
+
 func (r *resourceDbInstance) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	// TIP: ==== RESOURCE CREATE ====
 	// Generally, the Create function should do the following things. Make
@@ -475,10 +486,9 @@ func (r *resourceDbInstance) Create(ctx context.Context, req resource.CreateRequ
 		VpcSubnetIds:        flex.ExpandFrameworkStringValueSet(ctx, plan.VPCSubnetIDs),
 		Tags:                getTagsIn(ctx),
 	}
-	if plan.Bucket.IsNull() || plan.Bucket.IsUnknown() {
-		plan.Bucket = types.StringValue(DefaultBucketValue)
+	if !plan.Bucket.IsNull() {
+		in.Bucket = aws.String(plan.Bucket.ValueString())
 	}
-	in.Bucket = aws.String(plan.Bucket.ValueString())
 	if !plan.DBParameterGroupIdentifier.IsNull() {
 		in.DbParameterGroupIdentifier = aws.String(plan.DBParameterGroupIdentifier.ValueString())
 	}
@@ -498,10 +508,9 @@ func (r *resourceDbInstance) Create(ctx context.Context, req resource.CreateRequ
 		}
 		in.LogDeliveryConfiguration = expandLogDeliveryConfiguration(tfList)
 	}
-	if plan.Organization.IsNull() || plan.Organization.IsUnknown() {
-		plan.Organization = types.StringValue(DefaultOrganizationValue)
+	if !plan.Organization.IsNull() {
+		in.Organization = aws.String(plan.Organization.ValueString())
 	}
-	in.Organization = aws.String(plan.Organization.ValueString())
 	if !plan.PubliclyAccessible.IsNull() {
 		in.PubliclyAccessible = aws.Bool(plan.PubliclyAccessible.ValueBool())
 	}
@@ -532,12 +541,7 @@ func (r *resourceDbInstance) Create(ctx context.Context, req resource.CreateRequ
 	plan.ARN = flex.StringToFramework(ctx, out.Arn)
 	plan.ID = flex.StringToFramework(ctx, out.Id)
 	plan.AvailabilityZone = flex.StringToFramework(ctx, out.AvailabilityZone)
-	plan.DBParameterGroupIdentifier = flex.StringToFramework(ctx, out.DbParameterGroupIdentifier)
-	logDeliveryConfiguration, d := flattenLogDeliveryConfiguration(ctx, out.LogDeliveryConfiguration)
-	resp.Diagnostics.Append(d...)
-	plan.LogDeliveryConfiguration = logDeliveryConfiguration
 	plan.InfluxAuthParametersSecretARN = flex.StringToFramework(ctx, out.InfluxAuthParametersSecretArn)
-	plan.DBParameterGroupIdentifier = flex.StringToFramework(ctx, out.DbParameterGroupIdentifier)
 	plan.DBStorageType = flex.StringToFramework(ctx, (*string)(&out.DbStorageType))
 	plan.DeploymentType = flex.StringToFramework(ctx, (*string)(&out.DeploymentType))
 	plan.PubliclyAccessible = flex.BoolToFramework(ctx, out.PubliclyAccessible)
@@ -629,7 +633,7 @@ func (r *resourceDbInstance) Read(ctx context.Context, req resource.ReadRequest,
 	state.ARN = flex.StringToFramework(ctx, out.Arn)
 	state.AllocatedStorage = flex.Int32ToFramework(ctx, out.AllocatedStorage)
 	state.AvailabilityZone = flex.StringToFramework(ctx, out.AvailabilityZone)
-	state.DBInstanceType = flex.StringToFramework(ctx, (*string)(&out.DbInstanceType.Values()[0]))
+	state.DBInstanceType = flex.StringToFramework(ctx, (*string)(&out.DbInstanceType))
 	state.DBParameterGroupIdentifier = flex.StringToFramework(ctx, out.DbParameterGroupIdentifier)
 	state.DBStorageType = flex.StringToFramework(ctx, (*string)(&out.DbStorageType))
 	state.DeploymentType = flex.StringToFramework(ctx, (*string)(&out.DeploymentType))
@@ -661,30 +665,8 @@ func (r *resourceDbInstance) Read(ctx context.Context, req resource.ReadRequest,
 }
 
 func (r *resourceDbInstance) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// TIP: ==== RESOURCE UPDATE ====
-	// Not all resources have Update functions. There are a few reasons:
-	// a. The AWS API does not support changing a resource
-	// b. All arguments have RequiresReplace() plan modifiers
-	// c. The AWS API uses a create call to modify an existing resource
-	//
-	// In the cases of a. and b., the resource will not have an update method
-	// defined. In the case of c., Update and Create can be refactored to call
-	// the same underlying function.
-	//
-	// The rest of the time, there should be an Update function and it should
-	// do the following things. Make sure there is a good reason if you don't
-	// do one of these.
-	//
-	// 1. Get a client connection to the relevant service
-	// 2. Fetch the plan and state
-	// 3. Populate a modify input structure and check for changes
-	// 4. Call the AWS modify/update function
-	// 5. Use a waiter to wait for update to complete
-	// 6. Save the request plan to response state
-	// TIP: -- 1. Get a client connection to the relevant service
 	conn := r.Meta().TimestreamInfluxDBClient(ctx)
 
-	// TIP: -- 2. Fetch the plan
 	var plan, state resourceDbInstanceData
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
@@ -692,35 +674,30 @@ func (r *resourceDbInstance) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
-	// TIP: -- 3. Populate a modify input structure and check for changes
-	if !plan.Name.Equal(state.Name) ||
-		!plan.LogDeliveryConfiguration.Equal(state.LogDeliveryConfiguration) ||
-		!plan.DBInstanceType.Equal(state.DBInstanceType) {
+	// Only fields without RequireReplace() will cause an update.
+	// Any other field changes will cause the resource to be destroyed and recreated.
+	// for aws_timestreaminfluxdb_db_instance this is tags, log_delivery_configuration, and
+	// db_parameter_group_identifier.
+	if !plan.DBParameterGroupIdentifier.Equal(state.DBParameterGroupIdentifier) ||
+		!plan.LogDeliveryConfiguration.Equal(state.LogDeliveryConfiguration) {
 
 		in := &timestreaminfluxdb.UpdateDbInstanceInput{
-			// TIP: Mandatory or fields that will always be present can be set when
-			// you create the Input structure. (Replace these with real fields.)
 			Identifier: aws.String(plan.ID.ValueString()),
 		}
 
-		/*if !plan.Description.IsNull() {
-			// TIP: Optional fields should be set based on whether or not they are
-			// used.
-			in.Description = aws.String(plan.Description.ValueString())
+		if !plan.DBParameterGroupIdentifier.IsNull() && !plan.DBParameterGroupIdentifier.Equal(state.DBParameterGroupIdentifier) {
+			in.DbParameterGroupIdentifier = aws.String(plan.DBParameterGroupIdentifier.ValueString())
 		}
-		if !plan.ComplexArgument.IsNull() {
-			// TIP: Use an expander to assign a complex argument. The elements must be
-			// deserialized into the appropriate struct before being passed to the expander.
-			var tfList []complexArgumentData
-			resp.Diagnostics.Append(plan.ComplexArgument.ElementsAs(ctx, &tfList, false)...)
+
+		if !plan.LogDeliveryConfiguration.IsNull() && !plan.LogDeliveryConfiguration.Equal(state.LogDeliveryConfiguration) {
+			var tfList []logDeliveryConfigurationData
+			resp.Diagnostics.Append(plan.LogDeliveryConfiguration.ElementsAs(ctx, &tfList, false)...)
 			if resp.Diagnostics.HasError() {
 				return
 			}
+			in.LogDeliveryConfiguration = expandLogDeliveryConfiguration(tfList)
+		}
 
-			in.ComplexArgument = expandComplexArgument(tfList)
-		}*/
-
-		// TIP: -- 4. Call the AWS modify/update function
 		out, err := conn.UpdateDbInstance(ctx, in)
 		if err != nil {
 			resp.Diagnostics.AddError(
@@ -736,13 +713,8 @@ func (r *resourceDbInstance) Update(ctx context.Context, req resource.UpdateRequ
 			)
 			return
 		}
-
-		// TIP: Using the output from the update function, re-set any computed attributes
-		plan.ARN = flex.StringToFramework(ctx, out.Arn)
-		plan.ID = flex.StringToFramework(ctx, out.Id)
 	}
 
-	// TIP: -- 5. Use a waiter to wait for update to complete
 	updateTimeout := r.UpdateTimeout(ctx, plan.Timeouts)
 	_, err := waitDbInstanceUpdated(ctx, conn, plan.ID.ValueString(), updateTimeout)
 	if err != nil {
@@ -753,7 +725,31 @@ func (r *resourceDbInstance) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
-	// TIP: -- 6. Save the request plan to response state
+	// Update status to current status
+	readOut, err := findDbInstanceByID(ctx, conn, plan.ID.ValueString())
+	if tfresource.NotFound(err) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+	if err != nil {
+		resp.Diagnostics.AddError(
+			create.ProblemStandardMessage(names.TimestreamInfluxDB, create.ErrActionSetting, ResNameDbInstance, plan.ID.String(), err),
+			err.Error(),
+		)
+		return
+	}
+	// Setting computed attributes
+	plan.Status = flex.StringToFramework(ctx, (*string)(&readOut.Status))
+	plan.ARN = flex.StringToFramework(ctx, readOut.Arn)
+	plan.AvailabilityZone = flex.StringToFramework(ctx, readOut.AvailabilityZone)
+	plan.DBStorageType = flex.StringToFramework(ctx, (*string)(&readOut.DbStorageType))
+	plan.DeploymentType = flex.StringToFramework(ctx, (*string)(&readOut.DeploymentType))
+	plan.Endpoint = flex.StringToFramework(ctx, readOut.Endpoint)
+	plan.ID = flex.StringToFramework(ctx, readOut.Id)
+	plan.InfluxAuthParametersSecretARN = flex.StringToFramework(ctx, readOut.InfluxAuthParametersSecretArn)
+	plan.SecondaryAvailabilityZone = flex.StringToFramework(ctx, readOut.SecondaryAvailabilityZone)
+	plan.Status = flex.StringToFramework(ctx, (*string)(&readOut.Status))
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
