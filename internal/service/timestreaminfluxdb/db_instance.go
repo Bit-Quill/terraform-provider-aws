@@ -88,7 +88,8 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 			},
 			"arn": framework.ARNAttributeComputedOnly(),
 			"availability_zone": schema.StringAttribute{
-				Computed: true,
+				Computed:    true,
+				Description: `The Availability Zone in which the DB instance resides.`,
 			},
 			"bucket": schema.StringAttribute{
 				Optional: true,
@@ -150,6 +151,7 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 						"",
 					),
 				},
+				Description: `The id of the DB parameter group assigned to your DB instance.`,
 			},
 			"db_storage_type": schema.StringAttribute{
 				Optional: true,
@@ -187,7 +189,8 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 					with a Multi-AZ standby for high availability.`,
 			},
 			"endpoint": schema.StringAttribute{
-				Computed: true,
+				Computed:    true,
+				Description: `The endpoint used to connect to InfluxDB. The default InfluxDB port is 8086.`,
 			},
 			"id":                                framework.IDAttribute(),
 			"influx_auth_parameters_secret_arn": framework.ARNAttributeComputedOnly(),
@@ -206,6 +209,10 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 						"",
 					),
 				},
+				Description: `The name that uniquely identifies the DB instance when interacting with the 
+					Amazon Timestream for InfluxDB API and CLI commands. This name will also be a 
+					prefix included in the endpoint. DB instance names must be unique per customer 
+					and per region.`,
 			},
 			names.AttrTags:    tftags.TagsAttribute(),
 			names.AttrTagsAll: tftags.TagsAttributeComputedOnly(),
@@ -216,6 +223,8 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
+				Description: `The name of the initial organization for the initial admin user in InfluxDB. An 
+					InfluxDB organization is a workspace for a group of users.`,
 			},
 			"password": schema.StringAttribute{
 				Required: true,
@@ -227,6 +236,10 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 					stringvalidator.LengthAtMost(64),
 					stringvalidator.RegexMatches(regexache.MustCompile("^[a-zA-Z0-9]+$"), ""),
 				},
+				Description: `The password of the initial admin user created in InfluxDB. This password will 
+					allow you to access the InfluxDB UI to perform various administrative tasks and 
+					also use the InfluxDB CLI to create an operator token. These attributes will be 
+					stored in a Secret created in AWS SecretManager in your account.`,
 			},
 			"publicly_accessible": schema.BoolAttribute{
 				Optional: true,
@@ -235,12 +248,16 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.RequiresReplace(),
 				},
+				Description: `Configures the DB instance with a public IP to facilitate access.`,
 			},
 			"secondary_availability_zone": schema.StringAttribute{
 				Computed: true,
+				Description: `The Availability Zone in which the standby instance is located when deploying 
+					with a MultiAZ standby instance.`,
 			},
 			"status": schema.StringAttribute{
-				Computed: true,
+				Computed:    true,
+				Description: `The status of the DB instance.`,
 			},
 			"username": schema.StringAttribute{
 				Optional: true,
@@ -276,6 +293,7 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 						stringvalidator.RegexMatches(regexache.MustCompile("^sg-[a-z0-9]+$"), ""),
 					),
 				},
+				Description: `A list of VPC security group IDs to associate with the DB instance.`,
 			},
 			"vpc_subnet_ids": schema.SetAttribute{
 				Required:    true,
@@ -291,6 +309,8 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 						stringvalidator.RegexMatches(regexache.MustCompile("^subnet-[a-z0-9]+$"), ""),
 					),
 				},
+				Description: `A list of VPC subnet IDs to associate with the DB instance. Provide at least 
+					two VPC subnet IDs in different availability zones when deploying with a Multi-AZ standby.`,
 			},
 		},
 		Blocks: map[string]schema.Block{
@@ -298,6 +318,7 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 				Validators: []validator.List{
 					listvalidator.SizeAtMost(1),
 				},
+				Description: `Configuration for sending InfluxDB engine logs to a specified S3 bucket.`,
 				NestedObject: schema.NestedBlockObject{
 					Blocks: map[string]schema.Block{
 						"s3_configuration": schema.SingleNestedBlock{
@@ -309,11 +330,14 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 										stringvalidator.LengthAtMost(63),
 										stringvalidator.RegexMatches(regexache.MustCompile("^[0-9a-z]+[0-9a-z\\.\\-]*[0-9a-z]+$"), ""),
 									},
+									Description: `The name of the S3 bucket to deliver logs to.`,
 								},
 								"enabled": schema.BoolAttribute{
-									Optional: true,
+									Optional:    true,
+									Description: `Indicates whether log delivery to the S3 bucket is enabled.`,
 								},
 							},
+							Description: `Configuration for S3 bucket log delivery.`,
 						},
 					},
 				},
