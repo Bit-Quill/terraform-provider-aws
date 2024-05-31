@@ -223,6 +223,10 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+					stringvalidator.LengthAtMost(64),
+				},
 				Description: `The name of the initial organization for the initial admin user in InfluxDB. An 
 					InfluxDB organization is a workspace for a group of users.`,
 			},
