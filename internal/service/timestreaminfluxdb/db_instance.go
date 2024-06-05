@@ -604,7 +604,6 @@ func (r *resourceDbInstance) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 	// Setting computed attributes
-	plan.Status = flex.StringToFramework(ctx, (*string)(&readOut.Status))
 	plan.ARN = flex.StringToFramework(ctx, readOut.Arn)
 	plan.AvailabilityZone = flex.StringToFramework(ctx, readOut.AvailabilityZone)
 	plan.DBStorageType = flex.StringToFramework(ctx, (*string)(&readOut.DbStorageType))
