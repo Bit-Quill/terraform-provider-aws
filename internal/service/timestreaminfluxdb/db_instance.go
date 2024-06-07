@@ -60,6 +60,7 @@ const (
 	// because GetDbInstance won't return them.
 	DefaultBucketValue       = "bucket"
 	DefaultOrganizationValue = "organization"
+	DefaultUsernameValue     = "admin"
 	ResNameDbInstance        = "Db Instance"
 )
 
@@ -192,8 +193,14 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 				Computed:    true,
 				Description: `The endpoint used to connect to InfluxDB. The default InfluxDB port is 8086.`,
 			},
-			"id":                                framework.IDAttribute(),
-			"influx_auth_parameters_secret_arn": framework.ARNAttributeComputedOnly(),
+			"id": framework.IDAttribute(),
+			"influx_auth_parameters_secret_arn": schema.StringAttribute{
+				Computed: true,
+				Description: `The Amazon Resource Name (ARN) of the AWS Secrets Manager secret containing the 
+					initial InfluxDB authorization parameters. The secret value is a JSON formatted 
+					key-value pair holding InfluxDB authorization values: organization, bucket, 
+					username, and password.`,
+			},
 			"name": schema.StringAttribute{
 				Required: true,
 				PlanModifiers: []planmodifier.String{
@@ -265,6 +272,8 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 			},
 			"username": schema.StringAttribute{
 				Optional: true,
+				Computed: true,
+				Default:  stringdefault.StaticString(DefaultUsernameValue),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -438,7 +447,6 @@ func (r *resourceDbInstance) Create(ctx context.Context, req resource.CreateRequ
 	plan.ARN = flex.StringToFramework(ctx, out.Arn)
 	plan.ID = flex.StringToFramework(ctx, out.Id)
 	plan.AvailabilityZone = flex.StringToFramework(ctx, out.AvailabilityZone)
-	plan.InfluxAuthParametersSecretARN = flex.StringToFramework(ctx, out.InfluxAuthParametersSecretArn)
 	plan.DBStorageType = flex.StringToFramework(ctx, (*string)(&out.DbStorageType))
 	plan.DeploymentType = flex.StringToFramework(ctx, (*string)(&out.DeploymentType))
 	plan.PubliclyAccessible = flex.BoolToFramework(ctx, out.PubliclyAccessible)
@@ -467,7 +475,8 @@ func (r *resourceDbInstance) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	// Attributes only set after resource is finished creating
-	plan.Endpoint = flex.StringToFramework(ctx, out.Endpoint)
+	plan.Endpoint = flex.StringToFramework(ctx, readOut.Endpoint)
+	plan.InfluxAuthParametersSecretARN = flex.StringToFramework(ctx, readOut.InfluxAuthParametersSecretArn)
 	plan.Status = flex.StringToFramework(ctx, (*string)(&readOut.Status))
 	plan.SecondaryAvailabilityZone = flex.StringToFramework(ctx, readOut.SecondaryAvailabilityZone)
 
