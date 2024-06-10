@@ -5,11 +5,13 @@ package timestreaminfluxdb
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"time"
 
 	"github.com/YakDriver/regexache"
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/service/timestreaminfluxdb"
 	awstypes "github.com/aws/aws-sdk-go-v2/service/timestreaminfluxdb/types"
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
@@ -238,7 +240,8 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 					InfluxDB organization is a workspace for a group of users.`,
 			},
 			"password": schema.StringAttribute{
-				Required: true,
+				Required:  true,
+				Sensitive: true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -444,12 +447,10 @@ func (r *resourceDbInstance) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
+	// Computed attributes
 	plan.ARN = flex.StringToFramework(ctx, out.Arn)
 	plan.ID = flex.StringToFramework(ctx, out.Id)
 	plan.AvailabilityZone = flex.StringToFramework(ctx, out.AvailabilityZone)
-	plan.DBStorageType = flex.StringToFramework(ctx, (*string)(&out.DbStorageType))
-	plan.DeploymentType = flex.StringToFramework(ctx, (*string)(&out.DeploymentType))
-	plan.PubliclyAccessible = flex.BoolToFramework(ctx, out.PubliclyAccessible)
 
 	createTimeout := r.CreateTimeout(ctx, plan.Timeouts)
 	_, err = waitDbInstanceCreated(ctx, conn, plan.ID.ValueString(), createTimeout)
@@ -474,7 +475,7 @@ func (r *resourceDbInstance) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	// Attributes only set after resource is finished creating
+	// Computed attributes only set after resource is finished creating
 	plan.Endpoint = flex.StringToFramework(ctx, readOut.Endpoint)
 	plan.InfluxAuthParametersSecretARN = flex.StringToFramework(ctx, readOut.InfluxAuthParametersSecretArn)
 	plan.Status = flex.StringToFramework(ctx, (*string)(&readOut.Status))
@@ -524,6 +525,67 @@ func (r *resourceDbInstance) Read(ctx context.Context, req resource.ReadRequest,
 	state.Status = flex.StringToFramework(ctx, (*string)(&out.Status))
 	state.VPCSecurityGroupIDs = flex.FlattenFrameworkStringValueSet[string](ctx, out.VpcSecurityGroupIds)
 	state.VPCSubnetIDs = flex.FlattenFrameworkStringValueSet[string](ctx, out.VpcSubnetIds)
+
+	// timestreaminfluxdb.GetDbInstance will not return InfluxDB managed attributes, like username,
+	// bucket, organization, or password. All of these attributes are stored in a secret indicated by
+	// out.InfluxAuthParametersSecretArn. To support importing, these attributes must be read from the
+	// secret.
+	secretsConn := r.Meta().SecretsManagerClient(ctx)
+	secretsOut, err := secretsConn.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{
+		SecretId: out.InfluxAuthParametersSecretArn,
+	})
+	if err != nil {
+		resp.Diagnostics.AddError(
+			create.ProblemStandardMessage(names.TimestreamInfluxDB, create.ErrActionSetting, ResNameDbInstance, state.ID.String(), err),
+			err.Error(),
+		)
+		return
+	}
+
+	secrets := make(map[string]string)
+	if err := json.Unmarshal([]byte(aws.ToString(secretsOut.SecretString)), &secrets); err != nil {
+		resp.Diagnostics.AddError(
+			create.ProblemStandardMessage(names.TimestreamInfluxDB, create.ErrActionSetting, ResNameDbInstance, state.ID.String(), err),
+			err.Error(),
+		)
+		return
+	}
+	if username, ok := secrets["username"]; ok {
+		state.Username = flex.StringValueToFramework[string](ctx, username)
+	} else {
+		resp.Diagnostics.AddError(
+			create.ProblemStandardMessage(names.TimestreamInfluxDB, create.ErrActionSetting, ResNameDbInstance, state.ID.String(), err),
+			err.Error(),
+		)
+		return
+	}
+	if password, ok := secrets["password"]; ok {
+		state.Password = flex.StringValueToFramework[string](ctx, password)
+	} else {
+		resp.Diagnostics.AddError(
+			create.ProblemStandardMessage(names.TimestreamInfluxDB, create.ErrActionSetting, ResNameDbInstance, state.ID.String(), err),
+			err.Error(),
+		)
+		return
+	}
+	if organization, ok := secrets["organization"]; ok {
+		state.Organization = flex.StringValueToFramework[string](ctx, organization)
+	} else {
+		resp.Diagnostics.AddError(
+			create.ProblemStandardMessage(names.TimestreamInfluxDB, create.ErrActionSetting, ResNameDbInstance, state.ID.String(), err),
+			err.Error(),
+		)
+		return
+	}
+	if bucket, ok := secrets["bucket"]; ok {
+		state.Bucket = flex.StringValueToFramework[string](ctx, bucket)
+	} else {
+		resp.Diagnostics.AddError(
+			create.ProblemStandardMessage(names.TimestreamInfluxDB, create.ErrActionSetting, ResNameDbInstance, state.ID.String(), err),
+			err.Error(),
+		)
+		return
+	}
 
 	tags, err := listTags(ctx, conn, state.ARN.ValueString())
 	if err != nil {
