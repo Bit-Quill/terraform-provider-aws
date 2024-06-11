@@ -369,7 +369,7 @@ func TestAccTimestreamInfluxDBDbInstance_tags(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccDbInstanceConfig_tags2(rName, acctest.CtKey1, acctest.CtValue1, acctest.CtKey2, acctest.CtValue2),
+				Config: testAccDbInstanceConfig_tags2(rName, acctest.CtKey1, acctest.CtValue1Updated, acctest.CtKey2, acctest.CtValue2),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckDbInstanceExists(ctx, resourceName, &dbinstance),
 					resource.TestCheckResourceAttr(resourceName, acctest.CtTagsPercent, acctest.Ct2),
