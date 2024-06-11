@@ -18,9 +18,8 @@ import (
 
 func RegisterSweepers() {
 	resource.AddTestSweepers("aws_timestreaminfluxdb_db_instance", &resource.Sweeper{
-		Name:         "aws_timestreamwrite_database",
-		F:            sweepDbInstances,
-		Dependencies: []string{"aws_vpc", "aws_vpc_subnet"},
+		Name: "aws_timestreaminfluxdb_db_instance",
+		F:    sweepDbInstances,
 	})
 }
 

@@ -146,6 +146,7 @@ import (
 	"github.com/hashicorp/terraform-provider-aws/internal/service/storagegateway"
 	"github.com/hashicorp/terraform-provider-aws/internal/service/swf"
 	"github.com/hashicorp/terraform-provider-aws/internal/service/synthetics"
+	"github.com/hashicorp/terraform-provider-aws/internal/service/timestreaminfluxdb"
 	"github.com/hashicorp/terraform-provider-aws/internal/service/timestreamwrite"
 	"github.com/hashicorp/terraform-provider-aws/internal/service/transcribe"
 	"github.com/hashicorp/terraform-provider-aws/internal/service/transfer"
@@ -303,6 +304,7 @@ func registerSweepers() {
 	swf.RegisterSweepers()
 	synthetics.RegisterSweepers()
 	timestreamwrite.RegisterSweepers()
+	timestreaminfluxdb.RegisterSweepers()
 	transcribe.RegisterSweepers()
 	transfer.RegisterSweepers()
 	verifiedpermissions.RegisterSweepers()
