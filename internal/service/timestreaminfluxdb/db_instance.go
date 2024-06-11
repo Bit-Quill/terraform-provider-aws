@@ -773,6 +773,8 @@ func waitDbInstanceDeleted(ctx context.Context, conn *timestreaminfluxdb.Client,
 		Target:  []string{},
 		Refresh: statusDbInstance(ctx, conn, id),
 		Timeout: timeout,
+		Delay: 30 * time.Second,
+		PollInterval: 30 * time.Second,
 	}
 
 	outputRaw, err := stateConf.WaitForStateContext(ctx)
