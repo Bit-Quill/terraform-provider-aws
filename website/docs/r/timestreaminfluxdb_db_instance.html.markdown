@@ -24,7 +24,7 @@ Terraform resource for managing an Amazon Timestream for InfluxDB Db Instance.
 ```terraform
 resource "aws_timestreaminfluxdb_db_instance" "example" {
 	allocated_storage = 20
-    bucket = "example-bucket-name"
+	bucket = "example-bucket-name"
 	db_instance_type = "db.influx.medium"
 	username = "admin"
 	password = "example-password"
@@ -44,8 +44,8 @@ resource "aws_vpc" "example_vpc" {
 }
 
 resource "aws_subnet" "example_subnet" {
-  vpc_id     = aws_vpc.example_vpc.id
-  cidr_block = "10.0.1.0/24"
+	vpc_id = aws_vpc.example_vpc.id
+	cidr_block = "10.0.1.0/24"
 }
 
 resource "aws_security_group" "example_security_group" {
@@ -55,7 +55,7 @@ resource "aws_security_group" "example_security_group" {
 
 resource "aws_timestreaminfluxdb_db_instance" "example" {
 	allocated_storage = 20
-    bucket = "example-bucket-name"
+	bucket = "example-bucket-name"
 	db_instance_type = "db.influx.medium"
 	username = "admin"
 	password = "example-password"
@@ -75,8 +75,8 @@ resource "aws_vpc" "example_vpc" {
 }
 
 resource "aws_subnet" "example_subnet" {
-  vpc_id     = aws_vpc.example_vpc.id
-  cidr_block = "10.0.1.0/24"
+	vpc_id = aws_vpc.example_vpc.id
+	cidr_block = "10.0.1.0/24"
 }
 
 resource "aws_security_group" "example_security_group" {
@@ -85,11 +85,11 @@ resource "aws_security_group" "example_security_group" {
 }
 
 resource "aws_internet_gateway" "test_internet_gateway" {
-  vpc_id = aws_vpc.test_vpc.id
+	vpc_id = aws_vpc.test_vpc.id
 
-  tags = {
-    Name = "test_internet_gateway"
-  }
+	tags = {
+		Name = "test_internet_gateway"
+	}
 }
 
 resource "aws_route" "test_route" {
@@ -99,22 +99,22 @@ resource "aws_route" "test_route" {
 }
 
 resource "aws_route_table_association" "test_route_table_association" {
-  subnet_id      = aws_subnet.test_subnet.id
-  route_table_id = aws_vpc.test_vpc.main_route_table_id
+	subnet_id = aws_subnet.test_subnet.id
+	route_table_id = aws_vpc.test_vpc.main_route_table_id
 }
 
 resource "aws_vpc_security_group_ingress_rule" "test_vpc_security_group_ingress_rule_vpc" {
 	security_group_id = aws_security_group.test_security_group.id
 	referenced_security_group_id = aws_security_group.test_security_group.id
-	ip_protocol       = -1
+	ip_protocol = -1
 }
 
 resource "aws_vpc_security_group_ingress_rule" "test_vpc_security_group_ingress_rule_influxdb" {
-  security_group_id = aws_security_group.test_security_group.id
-  cidr_ipv4         = "0.0.0.0/0"
-  ip_protocol       = "tcp"
-  from_port       = 8086
-  to_port           = 8086
+	security_group_id = aws_security_group.test_security_group.id
+	cidr_ipv4 = "0.0.0.0/0"
+	ip_protocol = "tcp"
+	from_port = 8086
+	to_port = 8086
 }
 
 resource "aws_timestreaminfluxdb_db_instance" "example" {
@@ -167,12 +167,12 @@ resource "aws_timestreaminfluxdb_db_instance" "example" {
 	vpc_security_group_ids = [aws_security_group.example_security_group.id]
 	name = "example-db-instance"
 
-    log_delivery_configuration {
-        s3_configuration {
-            bucket_name = aws_s3_bucket.example_s3_bucket.name
-            enabled = true
-        }
-    }
+	log_delivery_configuration {
+		s3_configuration {
+			bucket_name = aws_s3_bucket.example_s3_bucket.name
+			enabled = true
+		}
+	}
 }
 ```
 
@@ -182,15 +182,15 @@ To use multi-region availability, at least two subnets must be created in differ
 
 ```terraform
 resource "aws_subnet" "example_subnet_1" {
-  vpc_id     = aws_vpc.example_vpc.id
-  cidr_block = "10.0.1.0/24"
-  availability_zone = "us-west-2a"
+	vpc_id = aws_vpc.example_vpc.id
+	cidr_block = "10.0.1.0/24"
+	availability_zone = "us-west-2a"
 }
 
 resource "aws_subnet" "example_subnet_2" {
-  vpc_id     = aws_vpc.example_vpc.id
-  cidr_block = "10.0.2.0/24"
-  availability_zone = "us-west-2b"
+	vpc_id = aws_vpc.example_vpc.id
+	cidr_block = "10.0.2.0/24"
+	availability_zone = "us-west-2b"
 }
 
 resource "aws_timestreaminfluxdb_db_instance" "example" {
@@ -269,8 +269,8 @@ In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashico
 
 ```terraform
 import {
-  to = aws_timestreaminfluxdb_db_instance.example
-  id = "12345abcde"
+	to = aws_timestreaminfluxdb_db_instance.example
+	id = "12345abcde"
 }
 ```
 
