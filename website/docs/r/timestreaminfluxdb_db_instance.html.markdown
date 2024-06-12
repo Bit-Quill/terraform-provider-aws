@@ -197,7 +197,7 @@ resource "aws_timestreaminfluxdb_db_instance" "example" {
 	allocated_storage = 20
 	bucket = "example-bucket-name"
 	db_instance_type = "db.influx.medium"
-    deployment_type = "WITH_MULTIAZ_STANDBY"
+	deployment_type = "WITH_MULTIAZ_STANDBY"
 	username = "admin"
 	password = "example-password"
 	vpc_subnet_ids = [aws_subnet.example_subnet_1.id, aws_subnet.example_subnet_2.id]
