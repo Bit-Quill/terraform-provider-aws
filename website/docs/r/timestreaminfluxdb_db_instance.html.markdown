@@ -119,7 +119,7 @@ resource "aws_vpc_security_group_ingress_rule" "test_vpc_security_group_ingress_
 
 resource "aws_timestreaminfluxdb_db_instance" "example" {
 	allocated_storage = 20
-    bucket = "example-bucket-name"
+	bucket = "example-bucket-name"
 	db_instance_type = "db.influx.medium"
 	username = "admin"
 	password = "example-password"
