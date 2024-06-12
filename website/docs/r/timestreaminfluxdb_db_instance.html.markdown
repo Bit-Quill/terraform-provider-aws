@@ -159,7 +159,7 @@ resource "aws_s3_bucket_policy" "allow_timestreaminfluxdb_policy" {
 
 resource "aws_timestreaminfluxdb_db_instance" "example" {
 	allocated_storage = 20
-    bucket = "example-bucket-name"
+	bucket = "example-bucket-name"
 	db_instance_type = "db.influx.medium"
 	username = "admin"
 	password = "example-password"
