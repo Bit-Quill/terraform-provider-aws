@@ -126,7 +126,7 @@ resource "aws_timestreaminfluxdb_db_instance" "example" {
 	vpc_subnet_ids = [aws_subnet.example_subnet.id]
 	vpc_security_group_ids = [aws_security_group.example_security_group.id]
 	name = "example-db-instance"
-    publicly_accessible = true # False by default
+	publicly_accessible = true # False by default
 }
 ```
 
