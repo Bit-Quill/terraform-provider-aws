@@ -265,17 +265,17 @@ This resource exports the following attributes in addition to the arguments abov
 
 ## Import
 
-In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import) to import Timestream for InfluxDB Db Instance using the `example_id_arg`. For example:
+In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import) to import Timestream for InfluxDB Db Instance using its identifier. For example:
 
 ```terraform
 import {
   to = aws_timestreaminfluxdb_db_instance.example
-  id = "1234568abcde"
+  id = "12345abcde"
 }
 ```
 
-Using `terraform import`, import Timestream for InfluxDB Db Instance using the `example_id_arg`. For example:
+Using `terraform import`, import Timestream for InfluxDB Db Instance using its identifier. For example:
 
 ```console
-% terraform import aws_timestreaminfluxdb_db_instance.example 1234568abcde
+% terraform import aws_timestreaminfluxdb_db_instance.example 12345abcde
 ```
