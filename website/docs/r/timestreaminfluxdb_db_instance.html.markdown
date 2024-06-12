@@ -195,7 +195,7 @@ resource "aws_subnet" "example_subnet_2" {
 
 resource "aws_timestreaminfluxdb_db_instance" "example" {
 	allocated_storage = 20
-    bucket = "example-bucket-name"
+	bucket = "example-bucket-name"
 	db_instance_type = "db.influx.medium"
     deployment_type = "WITH_MULTIAZ_STANDBY"
 	username = "admin"
