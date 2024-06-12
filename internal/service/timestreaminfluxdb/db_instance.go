@@ -328,7 +328,7 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 						"s3_configuration": schema.SingleNestedBlock{
 							Attributes: map[string]schema.Attribute{
 								"bucket_name": schema.StringAttribute{
-									Optional: true,
+									Required: true,
 									Validators: []validator.String{
 										stringvalidator.LengthAtLeast(3),
 										stringvalidator.LengthAtMost(63),
@@ -337,7 +337,7 @@ func (r *resourceDbInstance) Schema(ctx context.Context, req resource.SchemaRequ
 									Description: `The name of the S3 bucket to deliver logs to.`,
 								},
 								"enabled": schema.BoolAttribute{
-									Optional:    true,
+									Required:    true,
 									Description: `Indicates whether log delivery to the S3 bucket is enabled.`,
 								},
 							},
