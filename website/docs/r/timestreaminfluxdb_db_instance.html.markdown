@@ -113,7 +113,7 @@ resource "aws_vpc_security_group_ingress_rule" "test_vpc_security_group_ingress_
   security_group_id = aws_security_group.test_security_group.id
   cidr_ipv4         = "0.0.0.0/0"
   ip_protocol       = "tcp"
-  from_port			= 8086
+  from_port       = 8086
   to_port           = 8086
 }
 
